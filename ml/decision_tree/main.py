@@ -138,6 +138,7 @@ def recurse_train(train_set,train_label,features,epsilon):
     HD = calc_ent(D)
     for feature in features:
         A = np.array(train_set[:,feature].flat)
+        ##  NOTE 
         ##  here we modified the entropy to ratio of entropy
         ##  gda = HD - calc_condition_ent(A,D)
         gda = (HD - calc_condition_ent(A,D))/calc_condition_ent(A,D)

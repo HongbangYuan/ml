@@ -81,6 +81,8 @@ def Predict(testset,prior_probability,conditional_probability):
 class_num = 10
 feature_len = 784
 
+
+
 if __name__ == '__main__':
 
     from ml.configs.configs import cfg
