@@ -1,2 +1,0 @@
-# ml
-Machine Learning Course
