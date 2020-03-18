@@ -1,5 +1,5 @@
 
-# readme
+# Read Me
 
 I strongly recommend you follow the constructions to run the code.
 
@@ -13,4 +13,6 @@ I strongly recommend you follow the constructions to run the code.
 
 ``python setup.py build develop``
 
-``python run.py``
+``cd ml/<subfolder>``
+
+``python main.py``
