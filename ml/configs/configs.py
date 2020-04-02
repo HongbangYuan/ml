@@ -13,6 +13,9 @@ cfg = {
     }, 
     "DECISION_TREE": {
         # 
+    }, 
+    "SVM": {
+        #   "DIR"
     }
 }
 
@@ -38,3 +41,7 @@ cfg.DECISION_TREE.DATA_PATH = os.path.join(
 )
 assert os.path.exists(cfg.DECISION_TREE.DATA_PATH), \
     "path {} not found, please check it.".format(cfg.DECISION_TREE.DATA_PATH)
+
+cfg.SVM.DIR = os.path.join(
+    cfg.DIR, "ml", "SVM"
+)

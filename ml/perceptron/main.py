@@ -134,6 +134,8 @@ if __name__ == '__main__':
     raw_data = pd.read_csv(cfg.PERCEPTION.DATA_PATH, header=0)
     data = raw_data.values
 
+    chuncks = pd.read_csv(cfg.PERCEPTION.DATA_PATH, header=0, low_memory=False, chunksize=2000)
+
     imgs = data[0::, 1::]
     labels = data[::, 0]
 
