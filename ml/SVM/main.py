@@ -22,7 +22,7 @@ class SVM(object):
     Info    Support Vector Machine.
     """
 
-    def __init__(self, kernel="linear", max_iter=5000, epsilon=0.0001, penality_coeff=1):
+    def __init__(self, kernel="linear", max_iter=5000, epsilon=1e-8, penality_coeff=1.0):
         super(SVM, self).__init__()
         self._KERNELS = {
             "linear": self._linear_transform, 
@@ -34,6 +34,7 @@ class SVM(object):
         self.max_iter = max_iter
         self.epsilon = epsilon
         self.penality_coeff = penality_coeff
+        self._forbid_index = []
 
     def _setup(self, features, labels):
         self.features = np.array(features)
@@ -71,41 +72,53 @@ class SVM(object):
         cond = self.labels * self._cal_g(self.features)
         alpha_is_zero = np.abs(self.alpha) < self.epsilon
         alpha_is_penality_coeff = np.abs(self.alpha - self.penality_coeff) < self.epsilon
-        alpha_other = (1 - (alpha_is_zero + alpha_is_penality_coeff)) > 0
-        cond_alpha_is_zero = cond[alpha_is_zero] - 1 >= self.epsilon
-        cond_alpha_is_penality_coeff = cond[alpha_is_penality_coeff] - 1 <= self.epsilon
-        cond_alpha_other = np.abs(cond[alpha_other] - 1) < self.epsilon
+        alpha_support_vector = (1 - (alpha_is_zero + alpha_is_penality_coeff)) > 0
+        assert np.sum(alpha_is_penality_coeff+alpha_is_zero+alpha_support_vector) == self.labels.shape[0], \
+            "error in select alphas."
+        cond_alpha_is_zero = cond[alpha_is_zero] - 1 >= 0
+        cond_alpha_is_penality_coeff = cond[alpha_is_penality_coeff] - 1 <= 0
+        cond_alpha_support_vector = np.abs(cond[alpha_support_vector] - 1) < self.epsilon
         if np.sum(cond_alpha_is_zero) != np.sum(alpha_is_zero):
             return False
         if np.sum(cond_alpha_is_penality_coeff) != np.sum(alpha_is_penality_coeff):
             return False
-        if np.sum(cond_alpha_other) != np.sum(alpha_other):
+        if np.sum(cond_alpha_support_vector) != np.sum(alpha_support_vector):
             return False
         return True
 
-    def _select_alphas(self):
+    def _select_alphas(self, heuristic=False):
+        if not heuristic:
+            self._forbid_index = []
         cond = self.labels * self._cal_g(self.features)
         alpha_is_zero = np.abs(self.alpha) < self.epsilon
         alpha_is_penality_coeff = np.abs(self.alpha - self.penality_coeff) < self.epsilon
-        alpha_other = (1 - (alpha_is_zero + alpha_is_penality_coeff)) > 0
+        alpha_support_vector = (1 - (alpha_is_zero + alpha_is_penality_coeff)) > 0
 
-        cond_alpha_is_zero = cond[alpha_is_zero] - 1 >= self.epsilon
-        cond_alpha_is_penality_coeff = cond[alpha_is_penality_coeff] - 1 <= self.epsilon
-        cond_alpha_other = np.abs(cond[alpha_other] - 1) < self.epsilon
-        if np.sum(cond_alpha_other) != np.sum(alpha_other):
+        cond_alpha_is_zero = cond[alpha_is_zero] - 1 >= 0
+        cond_alpha_is_penality_coeff = cond[alpha_is_penality_coeff] - 1 <= 0
+        cond_alpha_support_vector = np.abs(1 - cond[alpha_support_vector]) < self.epsilon
+        if np.sum(cond_alpha_support_vector) != np.sum(alpha_support_vector):
             _cond = copy.copy(cond)
-            _cond[~alpha_other] = 1.0
+            _cond[~alpha_support_vector] = 1.0
             alpha_1 = np.argmax(np.abs(_cond - 1.0))
+            assert alpha_support_vector[alpha_1], "error in choosing parameters."
         elif np.sum(cond_alpha_is_zero) != np.sum(alpha_is_zero):
             _cond = copy.copy(cond)
             _cond[~alpha_is_zero] = 1.0
             alpha_1 = np.argmax(1 - _cond)
+            assert alpha_is_zero[alpha_1], "error in choosing parameters."
         elif np.sum(cond_alpha_is_penality_coeff) != np.sum(alpha_is_penality_coeff):
             _cond = copy.copy(cond)
             _cond[~alpha_is_penality_coeff] = 1.0
             alpha_1 = np.argmax(_cond - 1)
-        alpha_2 = np.argmax(np.abs(self.E[alpha_1] - self.E))
-
+            assert alpha_is_penality_coeff[alpha_1], "error in choosing parameters."
+        criterion = np.abs(self.E[alpha_1] - self.E)
+        if heuristic:
+            criterion[np.array(self._forbid_index)] = 0.0
+        # if np.random.randint(100) < 1:
+        #     criterion[np.argmax(criterion)] = 0.0
+        alpha_2 = np.argmax(criterion)
+        self._forbid_index.append(alpha_2)
         ##  alpha_1, alpha_2 is index of the selected alpha.
         return alpha_1, alpha_2
 
@@ -130,14 +143,16 @@ class SVM(object):
         self._setup(features, labels)
         print(">>>> training start.")
         pbar = tqdm(total=self.max_iter)
+        heuristic = False
         for iter_cnt in range(self.max_iter):
             ##  select alphas to be updated.
-            alpha_1, alpha_2 = self._select_alphas()
+            alpha_1, alpha_2 = self._select_alphas(heuristic)
 
             ##  calculate alpha_2's new value.
             eta = self.transform(self.features[alpha_1], self.features[alpha_1]) + \
                 self.transform(self.features[alpha_2], self.features[alpha_2]) - \
                     2 * self.transform(self.features[alpha_1], self.features[alpha_2])
+            eta += self.epsilon
             alpha_2_value = self.alpha[alpha_2] + \
                 (self.labels[alpha_2] * (self.E[alpha_1] - self.E[alpha_2])) / eta
 
@@ -163,6 +178,12 @@ class SVM(object):
                 self.bias = bias_2
             else:
                 self.bias = (bias_1 + bias_2) / 2
+            # if np.abs(self.alpha[alpha_1] - alpha_1_value) < self.epsilon \
+            #     and np.abs(self.alpha[alpha_2] - alpha_2_value) < self.epsilon:
+            # if self.alpha[alpha_1] == alpha_1_value and self.alpha[alpha_2] == alpha_2_value:
+            #     heuristic = True
+            # else:
+            #     heuristic = False
             self.alpha[alpha_1] = alpha_1_value
             self.alpha[alpha_2] = alpha_2_value
             self.E[alpha_1] = self._cal_E(self.features[alpha_1], self.labels[alpha_1])
@@ -209,7 +230,7 @@ class SVM(object):
         )
         x_min = np.min(self.pred_features[:, 0])
         x_max = np.max(self.pred_features[:, 0])
-        x_min, x_max = x_min - 0.1 * (x_max - x_min), x_max + 0.1 * (x_max - x_min)
+        x_min, x_max = x_min - 0.05 * (x_max - x_min), x_max + 0.05 * (x_max - x_min)
         x = np.arange(x_min, x_max, (x_max - x_min) / 100)
         # x = np.array([i for i in range(x_min, x_max, (x_max - x_min) / 100)])
         y = - self.weights[0] / self.weights[1] * x - self.bias / self.weights[1]
@@ -234,7 +255,7 @@ class SVM(object):
         index = (self.alpha > self.epsilon) & ((self.penality_coeff - self.alpha) > self.epsilon)
         # alpha_is_zero = np.abs(self.alpha) < self.epsilon
         # alpha_is_penality_coeff = np.abs(self.alpha - self.penality_coeff) < self.epsilon
-        # alpha_other = (1 - (alpha_is_zero + alpha_is_penality_coeff)) > 0
+        # alpha_support_vector = (1 - (alpha_is_zero + alpha_is_penality_coeff)) > 0
         # index = self.labels > 0
         pos_support_vector = self.features[index & (self.labels > 0)]
         neg_support_vector = self.features[index & (self.labels < 0)]
@@ -256,9 +277,10 @@ def load_data(dataset="iris"):
 
 def svm(X_train, X_test, Y_train, Y_test, path):
     plt.figure(figsize=(10, 5))
-    for i, C in enumerate([1, 100]):
+    # for i, C in enumerate([1, 100]):
+    for i, C in enumerate([1]):
         # "hinge" is the standard SVM loss
-        clf = LinearSVC(C=C, loss="hinge", random_state=42).fit(X_train, Y_train)
+        clf = LinearSVC(C=C, loss="hinge", random_state=42, max_iter=10000).fit(X_train, Y_train)
         # obtain the support vectors through the decision function
         decision_function = clf.decision_function(X_train)
         # we can also calculate the decision function manually
@@ -297,7 +319,7 @@ if __name__ == "__main__":
     logger.log_info("done after {:.3f} seconds".format(logger.show_item_time("load_data")))
 
     # model = SVM(kernel="polynomial", penality_coeff=100)
-    model = SVM(penality_coeff=100)
+    model = SVM(max_iter=5000, penality_coeff=1.0)
     
     logger.log_info("training...")
     logger.record_item_time("train")
