@@ -22,7 +22,9 @@ class SVM(object):
     Info    Support Vector Machine.
     """
 
-    def __init__(self, kernel="linear", max_iter=5000, epsilon=1e-8, penality_coeff=1.0):
+    def __init__(
+        self, kernel="linear", max_iter=5000, epsilon=1e-8, penality_coeff=1.0, loss_tolerance=1e-8
+    ):
         super(SVM, self).__init__()
         self._KERNELS = {
             "linear": self._linear_transform, 
@@ -35,6 +37,7 @@ class SVM(object):
         self.epsilon = epsilon
         self.penality_coeff = penality_coeff
         self._forbid_index = []
+        self.loss_tolerance = loss_tolerance
 
     def _setup(self, features, labels):
         self.features = np.array(features)
@@ -87,8 +90,8 @@ class SVM(object):
         return True
 
     def _select_alphas(self, heuristic=False):
-        if not heuristic:
-            self._forbid_index = []
+        # if not heuristic:
+        #     self._forbid_index = []
         cond = self.labels * self._cal_g(self.features)
         alpha_is_zero = np.abs(self.alpha) < self.epsilon
         alpha_is_penality_coeff = np.abs(self.alpha - self.penality_coeff) < self.epsilon
@@ -113,14 +116,18 @@ class SVM(object):
             alpha_1 = np.argmax(_cond - 1)
             assert alpha_is_penality_coeff[alpha_1], "error in choosing parameters."
         criterion = np.abs(self.E[alpha_1] - self.E)
-        if heuristic:
-            criterion[np.array(self._forbid_index)] = 0.0
-        # if np.random.randint(100) < 1:
-        #     criterion[np.argmax(criterion)] = 0.0
+        # if heuristic:
+        #     criterion[np.array(self._forbid_index)] = 0.0
         alpha_2 = np.argmax(criterion)
-        self._forbid_index.append(alpha_2)
-        ##  alpha_1, alpha_2 is index of the selected alpha.
+        # self._forbid_index.append(alpha_2)
         return alpha_1, alpha_2
+
+    def _cal_loss(self):
+        self.weights = np.matmul(self.labels * self.alpha, self.features)
+        loss = 0.5 * np.matmul(
+            self.weights, self.weights.T
+        ) - np.sum(self.alpha)
+        return loss
 
     def _clip_alphas(self, alpha_1, alpha_2, alpha_2_value):
         if self.labels[alpha_1] * self.labels[alpha_2] < 0:
@@ -171,25 +178,26 @@ class SVM(object):
                     self.labels[alpha_2] * self.transform(self.features[alpha_2], self.features[alpha_2]) * \
                         (alpha_2_value - self.alpha[alpha_2]) + self.bias
 
-            ##  update alphas, bias and E
+            
+            self.alpha[alpha_1] = alpha_1_value
+            self.alpha[alpha_2] = alpha_2_value
+            # if self._cal_loss() < self.loss_tolerance:
+            #     heuristic = True
+            #     pbar.set_description("loss: {:.5f}".format(self._cal_loss()))
+            #     continue
+            # else:
+            #     heuristic = False
             if 0 < alpha_1_value < self.penality_coeff:
                 self.bias = bias_1
             elif 0 < alpha_2_value < self.penality_coeff:
                 self.bias = bias_2
             else:
                 self.bias = (bias_1 + bias_2) / 2
-            # if np.abs(self.alpha[alpha_1] - alpha_1_value) < self.epsilon \
-            #     and np.abs(self.alpha[alpha_2] - alpha_2_value) < self.epsilon:
-            # if self.alpha[alpha_1] == alpha_1_value and self.alpha[alpha_2] == alpha_2_value:
-            #     heuristic = True
-            # else:
-            #     heuristic = False
-            self.alpha[alpha_1] = alpha_1_value
-            self.alpha[alpha_2] = alpha_2_value
             self.E[alpha_1] = self._cal_E(self.features[alpha_1], self.labels[alpha_1])
             self.E[alpha_2] = self._cal_E(self.features[alpha_2], self.labels[alpha_2])
             if self._satify_stop_condition():
                 break
+            pbar.set_description("loss: {:.5f}".format(self._cal_loss()))
             pbar.update()
         pbar.close()
         self.weights = np.matmul(
