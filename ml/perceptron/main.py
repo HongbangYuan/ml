@@ -21,10 +21,21 @@ class Perceptron(object):
         self.max_iteration = 50
 
     def predict_(self, x):
+        """
+        Info    predict the label of the input data.
+        Args    x (ndarray): input data.
+        Returns (ndarray): predicted data of the input data.
+        """
         wx = sum([self.w[j] * x[j] for j in range(len(self.w))])
         return int(wx > 0)
 
     def train(self, features, labels):
+        """
+        Info    train the perceptron model.
+        Args    features (ndarray): data from training set.
+                labels (ndarray): label of the input from training set.
+        Returns None.
+        """
         self.w = [0.0] * (len(features[0]) + 1)
 
         correct_count = 0

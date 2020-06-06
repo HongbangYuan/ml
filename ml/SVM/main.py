@@ -1,6 +1,6 @@
 
 """
-Info    Support Vector Machine for course Machine Learning.
+Info    Support Vector Machine.
 Author  Yiqun Chen
 Time    2020-04-02
 """
@@ -25,6 +25,15 @@ class SVM(object):
     def __init__(
         self, kernel="linear", max_iter=5000, epsilon=1e-8, penality_coeff=1.0, loss_tolerance=1e-8
     ):
+        """
+        Info    build a SVM model.
+        Args    kernel (string): the kernel type of the model.
+                max_iter (int): the max iteration SVM will run.
+                epsilon (float): for data stability.
+                penality_coeff (float): the penality coefficience of model.
+                loss_tolerance (float): not used yet.
+        Returns SVM model.
+        """
         super(SVM, self).__init__()
         self._KERNELS = {
             "linear": self._linear_transform, 
@@ -40,6 +49,9 @@ class SVM(object):
         self.loss_tolerance = loss_tolerance
 
     def _setup(self, features, labels):
+        """
+        Info    initialize the model parameters.
+        """
         self.features = np.array(features)
         self.labels = np.array(labels)
         self.bias = 0.0
@@ -49,12 +61,21 @@ class SVM(object):
         assert self.E.shape == self.labels.shape, "E shape error"
     
     def _gaussian_transform(self, x_1, X_2):
+        """
+        Info    for gaussian kernel. 
+        """
         Exception(">>>> gaussian kernel is not defined yet.")
 
     def _linear_transform(self, x_1, x_2):
+        """
+        Info    for linear kernel.
+        """
         return np.matmul(x_1, x_2)
 
     def _polynomial_transform(self, x_1, x_2, p=3):
+        """
+        Info     for polynomial kernel.
+        """
         return (np.matmul(x_1, x_2) + 1) ** p
 
     def transform(self, x_1, x_2):
@@ -90,6 +111,11 @@ class SVM(object):
         return True
 
     def _select_alphas(self, heuristic=False):
+        """
+        Info    select two alpha to update.
+        Args    heuristic (bool): whether to use a heuristic method or not, not used yet.
+        Returns alpha_1, alpha_2 (int): index of the to be updated parameters.
+        """
         # if not heuristic:
         #     self._forbid_index = []
         cond = self.labels * self._cal_g(self.features)
@@ -284,6 +310,9 @@ def load_data(dataset="iris"):
     return data[:,:2], data[:,-1]
 
 def svm(X_train, X_test, Y_train, Y_test, path):
+    """
+    Info    train and classify the data by using the SVM model from sklearn
+    """
     plt.figure(figsize=(10, 5))
     # for i, C in enumerate([1, 100]):
     for i, C in enumerate([1]):

@@ -1,0 +1,15 @@
+\contentsline {section}{\numberline {1}简介}{2}%
+\contentsline {section}{\numberline {2}基本思想}{2}%
+\contentsline {section}{\numberline {3}Mean Shift算法原理}{3}%
+\contentsline {subsection}{\numberline {3.1}Kernel Density Estimation}{3}%
+\contentsline {subsection}{\numberline {3.2}基本算法}{5}%
+\contentsline {subsection}{\numberline {3.3}优缺点}{5}%
+\contentsline {subsection}{\numberline {3.4}对Mean Shift的改进}{6}%
+\contentsline {subsection}{\numberline {3.5}带宽的选择}{6}%
+\contentsline {section}{\numberline {4}Mean Shift的应用简述}{6}%
+\contentsline {subsection}{\numberline {4.1}聚类}{6}%
+\contentsline {subsection}{\numberline {4.2}图像分割}{7}%
+\contentsline {subsection}{\numberline {4.3}图像平滑}{9}%
+\contentsline {subsection}{\numberline {4.4}轮廓提取}{10}%
+\contentsline {subsection}{\numberline {4.5}目标跟踪}{10}%
+\contentsline {section}{\numberline {5}参考资料}{10}%

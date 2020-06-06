@@ -19,18 +19,17 @@ def load_data(dataset="iris"):
     df = pd.DataFrame(iris.data, columns=iris.feature_names)
     df['label'] = iris.target
     df.columns = ['sepal length', 'sepal width', 'petal length', 'petal width', 'label']
-    # data = np.array(df.iloc[:100, [0, 1, -1]])
     data = np.array(df.iloc[:100, :])
-    # for i in range(len(data)):
-    #     if data[i,-1] == 0:
-    #         data[i,-1] = -1
-    # print(data)
     data[:, -1][data[:, -1] < 0.5] = -1
     return data[:,:4], data[:,-1].astype(np.int8)
 
 class AdaBoost(object):
     """
     Info    AdaBoost.
+    Args    M (int): how many basic classifier the model need. Default is 1 for the small dataset.
+            dim (int): which dimension of the data the model will use to train and predict. 
+            classifier_type (string): which type the basic classifier is, now only "DecisionStump" available.
+    Returns AdaBoost model.
     """
     def __init__(self, M=1, dim=0, classifier_type="DecisionStump"):
         self.M = M
@@ -40,15 +39,26 @@ class AdaBoost(object):
         self.classifier_type = classifier_type
         # self._build_model()
 
-    def _build_model(self, dim):
-        weight = np.ones(dim) * 1.0 / dim
-        for m in range(self.M):
-            self.classifiers.append(eval(self.classifier_type)(self.dim, weight))
+    # def _build_model(self, dim):
+    #     weight = np.ones(dim) * 1.0 / dim
+    #     for m in range(self.M):
+    #         self.classifiers.append(eval(self.classifier_type)(self.dim, weight))
 
     def __call__(self, x):
+        """
+        Info    predict the label of the input data.
+        Args    x (ndarray): data to be predicted. 
+        Returns the predict label of the input data.
+        """
         return self.predict(x)
 
     def train(self, x, y):
+        """
+        Info    train the adaboost model, the model will record the trained basic classifiers.
+        Args    x (ndarray): the training data.
+                y (ndarray): the label of the training data. 
+        Returns None.
+        """
         if len(x.shape) > 1:
             x = x[:, self.dim]
         weight = np.ones(y.shape[0]) * 1.0 / y.shape[0]
@@ -73,6 +83,11 @@ class AdaBoost(object):
             # weight = weight / np.sum(weight)
 
     def predict(self, x):
+        """
+        Info    predict the label of the input data.
+        Args    x (ndarray): input data. 
+        Returns y (ndarray): predicted label of the input data.
+        """
         if len(x.shape) > 1:
             x = x[:, self.dim]
         if len(self.classifiers) == 0:
@@ -104,6 +119,12 @@ class DecisionStump(object):
         return self.predict(x)
 
     def train(self, x, y):
+        """
+        Info    train the DecisionStump model.
+        Args    x (ndarray): 1-D training data.
+                y (ndarray): label of the training data.
+        Returns None.
+        """
         if self.weight is None:
             self.weight = np.ones(x.shape[0]) * 1.0/x.shape[0]
         pred = self.predict(x)
